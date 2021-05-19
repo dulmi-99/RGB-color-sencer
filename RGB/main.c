@@ -43,7 +43,7 @@ uint16_t adc_read(uint8_t ch)
 	// wait for conversion to complete
 	// ADSC becomes ’0? again
 	// till then, run loop continuously
-	while(ADCSRA & (1<<ADSC));
+	while(ADCSRA & (1<<ADSC));  //checks whether the conversion is over
 	
 	return (ADC);
 }
@@ -57,19 +57,20 @@ int main(void)
 	i2c_write(0x70);
 	lcd_init();
 	
-	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2);
+	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2); // define directions for PORTB
 	adc_init();
 	
 	while (1)
 	{
 		
 		
-		
+		//light up Red, Green, Blue lED's and take the reading from LDR
 		PORTB = (PORTB & 0x00) | (1<<Red); _delay_ms(500); Red_val = adc_read(pin);
 		PORTB = (PORTB & 0x00) | (1<<Green); _delay_ms(500); Green_val = adc_read(pin);
 		PORTB = (PORTB & 0x00) | (1<<Blue); _delay_ms(500); Blue_val = adc_read(pin);
 		
-		char str_red [sizeof(Red_val)*8+1];
+		// convert uint_16 to string
+		char str_red [sizeof(Red_val)*8+1]; 
 		char str_green [sizeof(Green_val)*8+1];
 		char str_Blue [sizeof(Blue_val)*8+1];
 		
@@ -77,6 +78,7 @@ int main(void)
 		utoa(Green_val,str_green,10);
 		utoa(Blue_val,str_Blue,10);
 		
+		// output the R,G,B readings of LDR in LCD display
 		lcd_cmd(0x80);lcd_msg("R:");lcd_cmd(0x83);lcd_msg(str_red);
 		lcd_cmd(0x88);lcd_msg("G:");lcd_cmd(0x8B);lcd_msg(str_green);
 		lcd_cmd(0xC6);lcd_msg("B:");lcd_cmd(0xCA);lcd_msg(str_Blue);

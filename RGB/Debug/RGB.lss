@@ -417,7 +417,7 @@ uint16_t adc_read(uint8_t ch)
 	// wait for conversion to complete
 	// ADSC becomes ’0? again
 	// till then, run loop continuously
-	while(ADCSRA & (1<<ADSC));
+	while(ADCSRA & (1<<ADSC));  //checks whether the conversion is over
  322:	80 91 7a 00 	lds	r24, 0x007A	; 0x80007a <__TEXT_REGION_LENGTH__+0x7f807a>
  326:	86 fd       	sbrc	r24, 6
  328:	fc cf       	rjmp	.-8      	; 0x322 <adc_read+0x18>
@@ -454,7 +454,7 @@ int main(void)
 	lcd_init();
  356:	0e 94 0e 01 	call	0x21c	; 0x21c <lcd_init>
 	
-	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2);
+	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2); // define directions for PORTB
  35a:	87 e0       	ldi	r24, 0x07	; 7
  35c:	84 b9       	out	0x04, r24	; 4
 	adc_init();
@@ -463,7 +463,7 @@ int main(void)
 	{
 		
 		
-		
+		//light up Red, Green, Blue lED's and take the reading from LDR
 		PORTB = (PORTB & 0x00) | (1<<Red); _delay_ms(500); Red_val = adc_read(pin);
  362:	85 b1       	in	r24, 0x05	; 5
  364:	81 e0       	ldi	r24, 0x01	; 1
@@ -521,8 +521,8 @@ int main(void)
  3ce:	0e 94 85 01 	call	0x30a	; 0x30a <adc_read>
  3d2:	90 93 0d 01 	sts	0x010D, r25	; 0x80010d <Blue_val+0x1>
  3d6:	80 93 0c 01 	sts	0x010C, r24	; 0x80010c <Blue_val>
-		
-		char str_red [sizeof(Red_val)*8+1];
+		// convert uint_16 to string
+		char str_red [sizeof(Red_val)*8+1]; 
 		char str_green [sizeof(Green_val)*8+1];
 		char str_Blue [sizeof(Blue_val)*8+1];
 		
@@ -554,6 +554,7 @@ int main(void)
  414:	90 91 0d 01 	lds	r25, 0x010D	; 0x80010d <Blue_val+0x1>
  418:	0e 94 39 02 	call	0x472	; 0x472 <utoa>
 		
+		// output the R,G,B readings of LDR in LCD display
 		lcd_cmd(0x80);lcd_msg("R:");lcd_cmd(0x83);lcd_msg(str_red);
  41c:	80 e8       	ldi	r24, 0x80	; 128
  41e:	0e 94 c4 00 	call	0x188	; 0x188 <lcd_cmd>
