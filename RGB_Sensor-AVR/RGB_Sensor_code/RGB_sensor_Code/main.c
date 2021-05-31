@@ -112,17 +112,17 @@ void adc_init()
 uint16_t adc_read(uint8_t ch)
 {
 	// select the corresponding channel 0~7
-	// ANDing with ’7? will always keep the value
-	// of ‘ch’ between 0 and 7
+	// ANDing with â€™7? will always keep the value
+	// of â€˜châ€™ between 0 and 7
 	ch &= 0b00000111;  // AND operation with 7
 	ADMUX = (ADMUX & 0xF8)|ch; // clears the bottom 3 bits before ORing
 	
 	// start single convertion
-	// write ’1? to ADSC
+	// write â€™1? to ADSC
 	ADCSRA |= (1<<ADSC);
 	
 	// wait for conversion to complete
-	// ADSC becomes ’0? again
+	// ADSC becomes â€™0? again
 	// till then, run loop continuously
 	while(ADCSRA & (1<<ADSC));
 	
@@ -145,22 +145,40 @@ int main(void)
 	
 	while (1)
 	
-	{			
-		adc_result0 = adc_read(3);
-		PORTB ^= (1<<Red); _delay_ms(500); Red_val = adc_read(pin); PORTB ^= (1<<Red);			
-		PORTB ^= (1<<Green); _delay_ms(500); Green_val = adc_read(pin);PORTB ^= (1<<Green);
-		PORTB ^= (1<<Blue); _delay_ms(500); Blue_val = adc_read(pin);PORTB ^= (1<<Blue);
-		char str_red [sizeof(Red_val)*8+1];
-		char str_green [sizeof(Green_val)*8+1];
-		char str_Blue [sizeof(Blue_val)*8+1];
+	{	
+		//mode selection
+		char mode = keyfind();
+		if(mode=='1'){ //mode 1 - calibration mode
+			lcd_init();
+			lcd_cmd(0x81);
+			lcd_msg("mode 1 selected");
+			}
+		if(mode=='2'){//mode 2 - sensoring mode
+			while(1){
+				adc_result0 = adc_read(3);
+				PORTB ^= (1<<Red); _delay_ms(500); Red_val = adc_read(pin); PORTB ^= (1<<Red);
+				PORTB ^= (1<<Green); _delay_ms(500); Green_val = adc_read(pin);PORTB ^= (1<<Green);
+				PORTB ^= (1<<Blue); _delay_ms(500); Blue_val = adc_read(pin);PORTB ^= (1<<Blue);
+				char str_red [sizeof(Red_val)*8+1];
+				char str_green [sizeof(Green_val)*8+1];
+				char str_Blue [sizeof(Blue_val)*8+1];
+				
+				lcd_cmd(0x80);
+				utoa(Red_val,str_red,10);
+				lcd_msg("R:");lcd_cmd(0x83);lcd_msg(str_red);
+				utoa(Green_val,str_green,10);
+				lcd_cmd(0x88);lcd_msg("G:");lcd_cmd(0x8B);lcd_msg(str_green);
+				utoa(Blue_val,str_Blue,10);
+				lcd_cmd(0xC6);lcd_msg("B:");lcd_cmd(0xCA);lcd_msg(str_Blue);
+			}
+		}
+		if(mode=='3'){//mode 3 - light up RGB led for given R,G,B values
+			lcd_init();
+			lcd_cmd(0x81);
+			lcd_msg("mode 3 selected");
+		}
+					
 		
-		lcd_cmd(0x80);
-		utoa(Red_val,str_red,10);
-		lcd_msg("R:");lcd_cmd(0x83);lcd_msg(str_red);
-		utoa(Green_val,str_green,10);
-		lcd_cmd(0x88);lcd_msg("G:");lcd_cmd(0x8B);lcd_msg(str_green);
-		utoa(Blue_val,str_Blue,10);
-		lcd_cmd(0xC6);lcd_msg("B:");lcd_cmd(0xCA);lcd_msg(str_Blue);
 		
 	}
 }
