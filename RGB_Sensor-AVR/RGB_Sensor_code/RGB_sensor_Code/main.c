@@ -128,6 +128,33 @@ uint16_t adc_read(uint8_t ch)
 	
 	return (ADC);
 }
+//function for get 3 digit from keypad
+
+// function for display details on lcd display
+char* displayWrite(char* clr_mode, char* clr ) {
+	lcd_init();
+	lcd_cmd(0x80);
+	lcd_msg(clr_mode);
+	lcd_cmd(0x87);
+	lcd_msg(clr);
+	lcd_cmd(0xC0);
+	lcd_msg("*-clear");
+	lcd_cmd(0xC9);
+	lcd_msg("Enter-#");
+	char* val = get_3_digit();
+	if (val) {
+		boolean flag1 = true;
+		while (flag1) {
+			char stat = customKeypad.getKey();
+			if (stat == '#') {
+				return  val;
+			}
+			else if (stat == '*') {
+				displayWrite(clr_mode, clr );
+			}
+		}
+	
+
 
 int main(void)
 {   i2c_init();
@@ -149,9 +176,7 @@ int main(void)
 		//mode selection
 		char mode = keyfind();
 		if(mode=='1'){ //mode 1 - calibration mode
-			lcd_init();
-			lcd_cmd(0x81);
-			lcd_msg("mode 1 selected");
+			displayWrite("Black","G");
 			}
 		if(mode=='2'){//mode 2 - sensoring mode
 			while(1){
