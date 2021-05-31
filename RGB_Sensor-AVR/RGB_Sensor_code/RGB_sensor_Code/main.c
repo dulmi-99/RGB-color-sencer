@@ -186,8 +186,8 @@ void RGB_off(){
 }
 
 
-	int main(void)
-	{ i2c_init();
+	int main(void){
+		i2c_init();
 		i2c_start();
 		i2c_write(0x70);
 		lcd_init();
@@ -239,9 +239,10 @@ void RGB_off(){
 			if (mode == '2') { //mode 2 - sensoring mode
 				while (1) {
 					adc_result0 = adc_read(3);
-					PORTB ^= (1 << Red); _delay_ms(500); Red_val = adc_read(pin); PORTB ^= (1 << Red);
-					PORTB ^= (1 << Green); _delay_ms(500); Green_val = adc_read(pin); PORTB ^= (1 << Green);
-					PORTB ^= (1 << Blue); _delay_ms(500); Blue_val = adc_read(pin); PORTB ^= (1 << Blue);
+					PORTB ^= (1 << Red); _delay_ms(500); Red_val = adc_read(pin); PORTB ^= (1 << Red); //light up red bulb
+					PORTB ^= (1 << Green); _delay_ms(500); Green_val = adc_read(pin); PORTB ^= (1 << Green); //light up green bulb
+					PORTB ^= (1 << Blue); _delay_ms(500); Blue_val = adc_read(pin); PORTB ^= (1 << Blue);   //light up blue bulb
+					// convert uint16 to string
 					char str_red [sizeof(Red_val) * 8 + 1];
 					char str_green [sizeof(Green_val) * 8 + 1];
 					char str_Blue [sizeof(Blue_val) * 8 + 1];
