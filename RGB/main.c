@@ -5,6 +5,7 @@
 #include <i2c.h>
 #include <LCD_I2C.h>
 #include <stdbool.h>
+#include <stdio.h>
 char* Red_b, Blue_b, Green_b, Red_w, Blue_w, Green_w; //for calibration values
 //defining pins of LED bulbs
 #define Red PORTC0
@@ -132,6 +133,7 @@ char keyfind(){
 
 		return (ADC);
 	}
+	
 	//function for get 3 digit from keypad
 	char* get_3_digit() {
 		int count = 0;
@@ -150,6 +152,30 @@ char keyfind(){
 				val += digit;
 				count += 1;
 			}
+		}
+		return val;
+	}
+	
+	//function for get 3 digits from keypad in the form of integers
+	int get_3_int_digits() {
+		int count = 0;
+		int val=0;
+
+		while (count < 3) {
+			char digit = keyfind();
+			int num=digit-'0';
+			lcd_cmd(0xC9 + count);
+			char* str_digit[1];
+			str_digit[0] = digit;
+			lcd_msg(str_digit);
+			if(count == 2){
+				val += num;
+			}
+			else{
+				val = (val + num) * 10;
+			}
+			count += 1;
+			
 		}
 		return val;
 	}
@@ -184,59 +210,29 @@ char keyfind(){
 	void RGB_off(){
 		DDRC &= ~(1<<PORTC0 | 1<<PORTC1 | 1<<PORTC2);
 	}
-	void setPin(char port,int pin,int state){  //port=A,B,C,D. pin 0-7. state 0 or 1.
-		switch(port){
-			case 'B':
-			if(state==1)
-			DDRB |= (1<<pin);
-			else
-			DDRB &=	~(1<<pin);
-			break;
-			case 'C':
-			if(state==1)
-			DDRC |= (1<<pin);
-			else
-			DDRC &=	~(1<<pin);
-			break;
-			case 'D':
-			if(state==1)
-			DDRD |= (1<<pin);
-			else
-			DDRD &=	~(1<<pin);
-			break;
-			default:
-			DDRB=0xFF;
-			PORTB=0xFF;
-		}
-	}
+	
 	void pwm(int pin,int num){
 		TCCR0B |= (1<<CS00)|(1<<CS01);//prescalar /64
 		TCCR2B |= (1<<CS20)|(1<<CS21);//prescalar /64
 		switch(pin){
 			case 0:
 			TCCR0A |= (1<<WGM01)|(1<<WGM00)|(1<<COM0A1);//fast pwm, non inverted
-			setPin('D',6,1);
+			DDRD |= (1<<PORTD6); //set the direction
 			OCR0A=num;
 			break;
 			case 1:
 			TCCR0A |= (1<<WGM01)|(1<<WGM00)|(1<<COM0B1);//fast pwm, non inverted
-			setPin('D',5,1);
+			DDRD |= (1<<PORTD5);
 			OCR0B=num;
 			break;
 			case 2:
-			TCCR2A |= (1<<WGM21)|(1<<WGM20)|(1<<COM2A1);//fast pwm, non inverted
-			setPin('B',3,1);
-			OCR2A=num;
-			break;
-			case 3:
 			TCCR2A |= (1<<WGM21)|(1<<WGM20)|(1<<COM2B1);//fast pwm, non inverted
-			setPin('D',3,1);
+			DDRD |= (1<<PORTD3);
 			OCR2B=num;
 			break;
 		}
 	}
-	int converter(char* a){		//char str[30] =a;		char *ptr;		int ret;		ret = strtol(a, &ptr, 10);		return ret;
-		}
+
 
 
 	int main(void){
@@ -312,26 +308,33 @@ char keyfind(){
 			}
 			if (mode == '3') { //mode 3 - light up RGB led for given R,G,B values
 				lcd_init();
-				lcd_cmd(0x81);
+				lcd_cmd(0x80);
 				lcd_msg("mode 3 selected");
-				_delay_ms(1000);
+				_delay_ms(200);
 				lcd_init();
-				lcd_cmd(0x81);
+				lcd_cmd(0x80);
 				lcd_msg("Enter RED value");
-				int Red_Val= converter(get_3_digit());
-				_delay_ms(1000);
+				int Red_Val= get_3_int_digits();
+				_delay_ms(100);
 				lcd_init();
-				lcd_cmd(0x81);
-				lcd_msg("Enter GREEN value");
-				int Green_Val= converter(get_3_digit());
-				_delay_ms(1000);
+				lcd_cmd(0x80);
+				lcd_msg("Enter GREEN");
+				lcd_cmd(0xC0);
+				lcd_msg("value");
+				int Green_Val=get_3_int_digits();
+				_delay_ms(100);
 				lcd_init();
-				lcd_cmd(0x81);
+				lcd_cmd(0x80);
 				lcd_msg("Enter BLUE value");
-				int Blue_Val= converter(get_3_digit());
+				int Blue_Val= get_3_int_digits();
 				pwm(0,Red_Val);
 				pwm(1,Green_Val);
-				pwm(3,Blue_Val);
+				pwm(2,Blue_Val);
+				_delay_ms(1000);
+				pwm(0,0);
+				pwm(1,0);
+				pwm(2,0);
+				main();
 			}
 
 
