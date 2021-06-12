@@ -5,15 +5,16 @@
 #include <i2c.h>
 #include <LCD_I2C.h>
 #include <stdbool.h>
-char* Red_b, Blue_b, Green_b, Red_w, Blue_w, Green_w; //for calibration values
+#include <stdio.h>
+int Red_b, Blue_b, Green_b, Red_w, Blue_w, Green_w; //for calibration values
 //defining pins of LED bulbs
-#define Red PORTB0
-#define Green PORTB1
-#define Blue PORTB2
+#define Red PORTC0
+#define Green PORTC1
+#define Blue PORTC2
 // defining keypad
-#define KEY_PRT   PORTD
-#define KEY_DDR   DDRD
-#define KEY_PIN   PIND
+#define KEY_PRT   PORTB
+#define KEY_DDR   DDRB
+#define KEY_PIN   PINB
 
 unsigned char keypad[4][4] = {
 	{' ', '0', '=', '+'},
@@ -103,7 +104,7 @@ char keyfind(){
 
 	uint8_t pin = 3;
 	uint16_t Red_val, Green_val, Blue_val;
-	uint16_t adc_result0;
+	
 	void adc_init()
 	{
 
@@ -132,39 +133,47 @@ char keyfind(){
 
 		return (ADC);
 	}
+	int power(int base, int exponent)
+	{
+		int result=1;
+		for (exponent; exponent>0; exponent--)
+		{
+			result = result * base;
+		}
+		return result;
+	}
 	//function for get 3 digit from keypad
-	char* get_3_digit() {
+	
+	//function for get 3 digit from keypad as integers
+	int get_3_digit_2() {
 		int count = 0;
-		char* val;
+		int val=0;
 
 		while (count < 3) {
 			char digit = keyfind();
-			if (digit) {
-
-				lcd_cmd(0x89 + count);
-				//lcd_msg("hey");
-				char* str_digit[2];
-				str_digit[0] = digit;
-				str_digit[1] = '\0';
-				lcd_msg(str_digit);
-				val += digit;
-				count += 1;
-			}
+			int num=digit-'0';
+			lcd_cmd(0xC9 + count);
+			char* str_digit[1];
+			str_digit[0] = digit;
+			lcd_msg(str_digit);
+			val += power(10,2-count)*num;
+			count += 1;
+			
 		}
 		return val;
 	}
 	// function for display details on lcd display
-	char* displayWrite(char* clr_mode, char* clr ) {
+	int displayWrite(char* clr_mode, char* clr ) {
 		lcd_init();
-		lcd_cmd(0x80);
-		lcd_msg(clr_mode);
-		lcd_cmd(0x87);
-		lcd_msg(clr);
 		lcd_cmd(0xC0);
-		lcd_msg("*-clear");
-		lcd_cmd(0xC9);
-		lcd_msg("Enter-#");
-		char* val = get_3_digit();
+		lcd_msg(clr_mode);
+		lcd_cmd(0xC7);
+		lcd_msg(clr);
+		lcd_cmd(0x80);
+		lcd_msg("- clear");
+		lcd_cmd(0x89);
+		lcd_msg("Enter +");
+		int val = get_3_digit_2();
 
 		if (val) {
 
@@ -181,10 +190,39 @@ char keyfind(){
 			}
 		}
 	}
-void RGB_off(){
-	DDRB = 0;
-}
+	void RGB_off(){
+		DDRC &= ~(1<<PORTC0 | 1<<PORTC1 | 1<<PORTC2);
+	}
+	
+	void pwm(int pin,int num){
+		TCCR0B |= (1<<CS00)|(1<<CS01);//prescalar /64
+		TCCR2B |= (1<<CS20)|(1<<CS21);//prescalar /64
+		switch(pin){
+			case 0:
+			TCCR0A |= (1<<WGM01)|(1<<WGM00)|(1<<COM0A1);//fast pwm, non inverted
+			DDRD |= (1<<PORTD6); //set the direction
+			OCR0A=num;
+			break;
+			case 1:
+			TCCR0A |= (1<<WGM01)|(1<<WGM00)|(1<<COM0B1);//fast pwm, non inverted
+			DDRD |= (1<<PORTD5);
+			OCR0B=num;
+			break;
+			case 2:
+			TCCR2A |= (1<<WGM21)|(1<<WGM20)|(1<<COM2B1);//fast pwm, non inverted
+			DDRD |= (1<<PORTD3);
+			OCR2B=num;
+			break;
+		}
+	}
+	int map(int min,int max,int val){
+		uint8_t mapped_val;
+		mapped_val = (((val-min)/(max-min))*255);
+		return mapped_val;
+	}
+	
 
+_Bool calibrated = false;
 
 	int main(void){
 		i2c_init();
@@ -195,7 +233,7 @@ void RGB_off(){
 		lcd_cmd(0x88); lcd_msg("mode 2");
 		lcd_cmd(0xc5); lcd_msg("mode 3");
 
-		DDRB = 0b11111111;
+		DDRC = 0b00000111;
 
 		adc_init();
 
@@ -203,24 +241,25 @@ void RGB_off(){
 		while (1)
 
 		{
+			
 			//mode selection
 			char mode = keyfind();
 			if (mode == '1') { //mode 1 - calibration mode
 				RGB_off();
-				Red_b = displayWrite("Black", "R-");
+				Red_b = displayWrite("Min", "R-");
 				if (Red_b) {
-					Green_b = displayWrite("Black", "G-");
+					Green_b = displayWrite("Min", "G-");
 					if (Green_b) {
-						Blue_b = displayWrite("Black", "B-");
+						Blue_b = displayWrite("Min", "B-");
 						if (Blue_b) {
-							Red_w = displayWrite("White", "R-");
+							Red_w = displayWrite("Max", "R-");
 							if (Red_w) {
-								Green_w = displayWrite("White", "G-");
+								Green_w = displayWrite("Max", "G-");
 								if (Green_w) {
-									Blue_w = displayWrite("White", "B-");
+									Blue_w = displayWrite("Max", "B-");
 									if (Blue_w) {
 										_Bool flag = false;
-										_Bool calibrated = true;
+										calibrated = true;
 										lcd_init();
 										lcd_cmd(0x82);
 										lcd_msg("Calibration");
@@ -237,29 +276,81 @@ void RGB_off(){
 				}
 			}
 			if (mode == '2') { //mode 2 - sensoring mode
+				lcd_init();
 				while (1) {
-					adc_result0 = adc_read(3);
-					PORTB ^= (1 << Red); _delay_ms(500); Red_val = adc_read(pin); PORTB ^= (1 << Red); //light up red bulb
-					PORTB ^= (1 << Green); _delay_ms(500); Green_val = adc_read(pin); PORTB ^= (1 << Green); //light up green bulb
-					PORTB ^= (1 << Blue); _delay_ms(500); Blue_val = adc_read(pin); PORTB ^= (1 << Blue);   //light up blue bulb
-					// convert uint16 to string
-					char str_red [sizeof(Red_val) * 8 + 1];
-					char str_green [sizeof(Green_val) * 8 + 1];
-					char str_Blue [sizeof(Blue_val) * 8 + 1];
+					
+					PORTC ^= (1 << Red); _delay_ms(500); Red_val = adc_read(pin); PORTC ^= (1 << Red); //light up red bulb
+					PORTC ^= (1 << Green); _delay_ms(500); Green_val = adc_read(pin); PORTC ^= (1 << Green); //light up green bulb
+					PORTC ^= (1 << Blue); _delay_ms(500); Blue_val = adc_read(pin); PORTC ^= (1 << Blue);   //light up blue bulb
+					char str_red[3],str_blue[3],str_green[3];
+					if(calibrated){
+						
+						// convert uint16 to int
+						int int_red = (int)Red_val;
+						int int_green = (int)Green_val;
+						int int_blue = (int)Blue_val;
+						
+						//mapping value
+						int Red_val = map(Red_b,Red_w,int_red);
+						int Green_val = map(Green_b,Green_w,int_green);
+						int Blue_val = map(Blue_b,Blue_w,int_blue);
+						// convert int to string
+						itoa(Red_val,str_red,10);
+						itoa(Green_val,str_green,10);
+						itoa(Blue_val,str_blue,10);
+									 
+						
+					}
+					
+					else{
+						// convert uint16 to string
+						char str_red [sizeof(Red_val) * 8 + 1];
+						char str_green [sizeof(Green_val) * 8 + 1];
+						char str_blue [sizeof(Blue_val) * 8 + 1];
+						utoa(Red_val, str_red, 10);
+						utoa(Green_val, str_green, 10);
+						utoa(Blue_val, str_blue, 10);
+						}
+					
+					
 
-					lcd_cmd(0x80);
-					utoa(Red_val, str_red, 10);
-					lcd_msg("R:"); lcd_cmd(0x83); lcd_msg(str_red);
-					utoa(Green_val, str_green, 10);
+					lcd_cmd(0x80);lcd_msg("R:"); lcd_cmd(0x83); lcd_msg(str_red);
+					
 					lcd_cmd(0x88); lcd_msg("G:"); lcd_cmd(0x8B); lcd_msg(str_green);
-					utoa(Blue_val, str_Blue, 10);
-					lcd_cmd(0xC6); lcd_msg("B:"); lcd_cmd(0xCA); lcd_msg(str_Blue);
+					
+					lcd_cmd(0xC6); lcd_msg("B:"); lcd_cmd(0xCA); lcd_msg(str_blue);
 				}
 			}
 			if (mode == '3') { //mode 3 - light up RGB led for given R,G,B values
 				lcd_init();
-				lcd_cmd(0x81);
+				lcd_cmd(0x80);
 				lcd_msg("mode 3 selected");
+				_delay_ms(200);
+				lcd_init();
+				lcd_cmd(0x80);
+				lcd_msg("Enter RED value");
+				int Red_Val= get_3_digit_2();
+				_delay_ms(100);
+				lcd_init();
+				lcd_cmd(0x80);
+				lcd_msg("Enter GREEN");
+				lcd_cmd(0xC0);
+				lcd_msg("value");
+				int Green_Val=get_3_digit_2();
+				_delay_ms(100);
+				lcd_init();
+				lcd_cmd(0x80);
+				lcd_msg("Enter BLUE value");
+				int Blue_Val= get_3_digit_2();
+				pwm(0,Red_Val);
+				pwm(1,Green_Val);
+				pwm(2,Blue_Val);
+				_delay_ms(1000);
+				pwm(0,0);
+				pwm(1,0);
+				pwm(2,0);
+				//_delay_ms(1000);
+				main();
 			}
 
 
