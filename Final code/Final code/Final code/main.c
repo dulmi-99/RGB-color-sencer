@@ -344,17 +344,17 @@ char keyfind(){
 				if (mode == '1') { //mode 1 - calibration mode
 					RGB_off();
 					// take the values of basic colors
-					Red_b = displayWrite("Min", "R-");
+					Red_b = displayWrite("BLACK", "R-");
 					if (Red_b) {
-						Green_b = displayWrite("Min", "G-");
+						Green_b = displayWrite("BLACK", "G-");
 						if (Green_b) {
-							Blue_b = displayWrite("Min", "B-");
+							Blue_b = displayWrite("BLACK", "B-");
 							if (Blue_b) {
-								Red_w = displayWrite("Max", "R-");
+								Red_w = displayWrite("WHITE", "R-");
 								if (Red_w) {
-									Green_w = displayWrite("Max", "G-");
+									Green_w = displayWrite("WHITE", "G-");
 									if (Green_w) {
-										Blue_w = displayWrite("Max", "B-");
+										Blue_w = displayWrite("WHITE", "B-");
 										if (Blue_w) {
 											Red_r = displayWrite("RED","R-");
 											if(Red_r){
